@@ -71,8 +71,8 @@ const Basketball = __webpack_require__(3);
 const Backboard = __webpack_require__(4);
 const FrontRim = __webpack_require__(1);
 const BackRim = __webpack_require__(1);
-const Ground = __webpack_require__ (8);
-const Player = __webpack_require__ (9);
+const Ground = __webpack_require__ (5);
+const Player = __webpack_require__ (6);
 
 class Game {
   constructor(canvasEl) {
@@ -207,7 +207,7 @@ class Game {
   }
 
   draw(ctx) {
-    ctx.clearRect(Game.START_X, Game.START_Y,
+    ctx.clearRect(0, 0,
                   Game.START_X + Game.DIM_X,
                   Game.START_Y + Game.DIM_Y);
     ctx.fillStyle = Game.BG_COLOR;
@@ -339,8 +339,8 @@ module.exports = BackRim;
 /***/ (function(module, exports, __webpack_require__) {
 
 const Game = __webpack_require__ (0);
-const GameView = __webpack_require__ (5);
-const Matter = __webpack_require__ (6);
+const GameView = __webpack_require__ (7);
+const Matter = __webpack_require__ (8);
 
 const scaleFactor = 0.1;
 
@@ -360,16 +360,25 @@ document.addEventListener("DOMContentLoaded", () => {
   let mouseEndPos = [0,0];
   canvas.onmousedown = function(e) {
     mouseStartPos = [e.pageX, e.pageY];
-    game.activeBall.vel = [0,-20];
-    game.activeBall.pos[1] -= 1;
+    game.player[0].released = false;
+    game.activeBall.pos[0] = game.activeBall.pos[0]+15;
+    game.activeBall.pos[1] = game.activeBall.pos[1]-2;
+    game.player[0].pos[1] = game.player[0].starting_pos[1]-2;
+    // debugger;
+    game.activeBall.vel = [0,-5];
+    game.player[0].vel = [0,-5];
   };
   canvas.onmouseup = function(e) {
     mouseEndPos = [e.pageX, e.pageY];
+    game.player[0].released = true;
     game.activeBall.pos = [game.activeBall.pos[0]-1, game.activeBall.pos[1]-1];
     game.activeBall.vel = [(mouseStartPos[0]-mouseEndPos[0]) * scaleFactor,
                            (mouseStartPos[1]-mouseEndPos[1]) * scaleFactor];
-    game.addBasketball();
-    game.activeBall = game.basketballs[game.basketballs.length-1];
+    game.activeBall = null;
+    setTimeout(() => {
+      game.addBasketball();
+      game.activeBall = game.basketballs[game.basketballs.length-1];
+    }, 500);
   };
 
 });
@@ -400,7 +409,7 @@ class Basketball {
     this.game = options.game;
     this.mass = 0.1;
     this.restitution = 1;
-    this.starting_pos = this.pos;
+    this.starting_pos = options.game.bballStartingPosition();
   }
 
   draw(ctx) {
@@ -412,7 +421,11 @@ class Basketball {
     // ctx.fill();
     const image = new Image();
     image.src = './assets/bball.png';
+    // ctx.save();
+    let netVel = Math.sqrt(Math.pow(this.vel[0], 2) + Math.pow(this.vel[1], 2));
+    // ctx.rotate(0.2*netVel);
     ctx.drawImage(image, this.pos[0]-this.radius, this.pos[1]-this.radius, this.radius*2, this.radius*2);
+    // ctx.restore();
   }
 
   move(timeDelta) {
@@ -423,6 +436,8 @@ class Basketball {
 
     if (this.pos[0] === this.starting_pos[0] &&
         this.pos[1] >= this.starting_pos[1]) {
+          // console.log(this.pos[1]);
+          // console.log(this.starting_pos[1]);
       return;
     }
 
@@ -653,6 +668,9 @@ class Backboard {
   draw(ctx) {
     ctx.fillStyle = this.color;
     ctx.fillRect(this.pos[0], this.pos[1], this.width, this.height);
+    const image = new Image();
+    image.src = './assets/hoop.png';
+    ctx.drawImage(image, this.pos[0]-30, this.pos[1]-5, 130, this.height+20);
   }
 
   move() {
@@ -665,6 +683,117 @@ module.exports = Backboard;
 
 /***/ }),
 /* 5 */
+/***/ (function(module, exports) {
+
+const DEFAULTS = {
+  COLOR: '#FFA500',
+  WIDTH: 2000,
+  HEIGHT: 10
+};
+
+class Ground {
+  constructor(options = {}) {
+    this.pos = options.pos;
+    this.vel = [0,0];
+    this.width = DEFAULTS.WIDTH;
+    this.height = DEFAULTS.HEIGHT;
+    this.color = DEFAULTS.COLOR;
+    this.game = options.game;
+    this.restitution = 1;
+  }
+
+  draw(ctx) {
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.pos[0], this.pos[1], this.width, this.height);
+  }
+
+  move() {
+
+  }
+}
+
+module.exports = Ground;
+
+
+/***/ }),
+/* 6 */
+/***/ (function(module, exports) {
+
+class Player {
+  constructor(options = {}) {
+    this.pos = options.pos;
+    this.vel = [0,-5];
+    this.game = options.game;
+    this.mass = 0.1;
+    this.starting_pos = this.game.playerStartingPosition();
+    this.width = 60;
+    this.height = 200;
+    this.released = false;
+  }
+
+  draw(ctx) {
+    const image = new Image();
+    if(this.pos[1] >= this.starting_pos[1]) {
+      // console.log("SET!");
+      this.pos[1] = this.starting_pos[1];
+      image.src = './assets/curry-set.png';
+    } else if (this.released === false) {
+      // console.log(this.vel);
+
+      image.src = './assets/curry-rise.png';
+    } else {
+      image.src = './assets/curry-release.png';
+    }
+    ctx.drawImage(image, this.pos[0], this.pos[1], this.width, this.height);
+  }
+
+  move(timeDelta) {
+    //timeDelta is number of milliseconds since last move
+    //if the computer is busy the time delta will be larger
+    //in this case the MovingObject should move farther in this frame
+    //velocity of object is how far it should move in 1/60th of a second
+    // this.pos[1] = this.pos[1] - 1;
+    if (this.pos[0] === this.starting_pos[0] &&
+        this.pos[1] >= this.starting_pos[1]) {
+          // console.log(this.pos[1]);
+          // console.log(this.starting_pos[1]);
+      return;
+    }
+
+    const Cd = 0.3; // Dimensionless
+    const rho = 2; // kg / m^3
+    const A = Math.PI * this.width/3 * this.width/3 / (10000);
+    const ag = 9.81;
+
+    // Do physics
+    // Drag force: Fd = -1/2 * Cd * A * rho * v * v
+    let Fx = -0.5 * Cd * A * rho * this.vel[0] * this.vel[0] * this.vel[0] / Math.abs(this.vel[0]);
+    let Fy = -0.5 * Cd * A * rho * this.vel[1] * this.vel[1] * this.vel[1] / Math.abs(this.vel[1]);
+
+    Fx = (isNaN(Fx) ? 0 : Fx);
+    Fy = (isNaN(Fy) ? 0 : Fy);
+
+    // Calculate acceleration ( F = ma )
+    let ax = Fx / this.mass;
+    let ay = ag + (Fy / this.mass);
+
+    // Integrate to get velocity
+    this.vel[0] += ax*frameRate;
+    this.vel[1] += ay*frameRate;
+
+    // Integrate to get position
+    this.pos[0] += this.vel[0]*frameRate*100;
+    this.pos[1] += this.vel[1]*frameRate*100;
+
+  }
+}
+
+const frameRate = 1/60;
+module.exports = Player;
+
+
+/***/ }),
+/* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
 const Game = __webpack_require__(0);
@@ -697,7 +826,7 @@ module.exports = GameView;
 
 
 /***/ }),
-/* 6 */
+/* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(global) {var require;var require;/**
@@ -10978,10 +11107,10 @@ var Vector = _dereq_('../geometry/Vector');
 },{"../body/Composite":2,"../core/Common":14,"../core/Events":16,"../geometry/Bounds":26,"../geometry/Vector":28}]},{},[30])(30)
 });
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(7)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(9)))
 
 /***/ }),
-/* 7 */
+/* 9 */
 /***/ (function(module, exports) {
 
 var g;
@@ -11005,66 +11134,6 @@ try {
 // easier to handle this case. if(!global) { ...}
 
 module.exports = g;
-
-
-/***/ }),
-/* 8 */
-/***/ (function(module, exports) {
-
-const DEFAULTS = {
-  COLOR: '#FFA500',
-  WIDTH: 2000,
-  HEIGHT: 10
-};
-
-class Ground {
-  constructor(options = {}) {
-    this.pos = options.pos;
-    this.vel = [0,0];
-    this.width = DEFAULTS.WIDTH;
-    this.height = DEFAULTS.HEIGHT;
-    this.color = DEFAULTS.COLOR;
-    this.game = options.game;
-    this.restitution = 1;
-  }
-
-  draw(ctx) {
-    ctx.fillStyle = this.color;
-    ctx.fillRect(this.pos[0], this.pos[1], this.width, this.height);
-  }
-
-  move() {
-
-  }
-}
-
-module.exports = Ground;
-
-
-/***/ }),
-/* 9 */
-/***/ (function(module, exports) {
-
-class Player {
-  constructor(options = {}) {
-    this.pos = options.pos;
-    this.vel = [0,0];
-    this.game = options.game;
-    this.starting_pos = this.pos;
-  }
-
-  draw(ctx) {
-    const image = new Image();
-    image.src = './assets/curry-set.png';
-    ctx.drawImage(image, this.pos[0], this.pos[1], 60, 200);
-  }
-
-  move() {
-
-  }
-}
-
-module.exports = Player;
 
 
 /***/ })
