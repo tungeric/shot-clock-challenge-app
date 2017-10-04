@@ -60,99 +60,48 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 0);
+/******/ 	return __webpack_require__(__webpack_require__.s = 2);
 /******/ })
 /************************************************************************/
 /******/ ([
 /* 0 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const Game = __webpack_require__ (1);
-const GameView = __webpack_require__ (3);
-const Matter = __webpack_require__ (4);
-
-document.addEventListener("DOMContentLoaded", () => {
-  const canvasEl = document.getElementById("game-canvas");
-  canvasEl.width = Game.DIM_X;
-  canvasEl.height = Game.DIM_Y;
-
-  const ctx = canvasEl.getContext("2d");
-  // ctx.fillStyle="purple";
-  // ctx.fillRect(0, 0, 500, 500);
-  //
-  // ctx.beginPath();
-  // ctx.arc(100, 100, 20, 0, 2*Math.PI, true);
-  // ctx.strokeStyle = "green";
-  // ctx.lineWidth = 5;
-  // ctx.stroke();
-  // ctx.fillStyle = "blue";
-  // ctx.fill();
-
-  const game = new Game(canvasEl);
-  new GameView(game, ctx).start();
-
-
-
-
-  // //  module aliases
-  // var Engine = Matter.Engine,
-  //     Render = Matter.Render,
-  //     World = Matter.World,
-  //     Bodies = Matter.Bodies;
-  //
-  // // create an engine
-  // var engine = Engine.create();
-  //
-  // // create a renderer
-  // var render = Render.create({
-  //     element: document.body,
-  //     engine: engine
-  // });
-  //
-  // // create two boxes and a ground
-  // var boxA = Bodies.rectangle(400, 200, 80, 80);
-  // var boxB = Bodies.rectangle(450, 50, 80, 80);
-  // var ground = Bodies.rectangle(400, 610, 810, 60, { isStatic: true });
-  //
-  // // add all of the bodies to the world
-  // World.add(engine.world, [boxA, boxB, ground]);
-  //
-  // // run the engine
-  // Engine.run(engine);
-  //
-  // // run the renderer
-  // Render.run(render);
-});
-
-
-/***/ }),
-/* 1 */
-/***/ (function(module, exports, __webpack_require__) {
-
-const Basketball = __webpack_require__(2);
-const Backboard = __webpack_require__(6);
-const FrontRim = __webpack_require__(7);
-const BackRim = __webpack_require__(7);
-
+const Basketball = __webpack_require__(3);
+const Backboard = __webpack_require__(4);
+const FrontRim = __webpack_require__(1);
+const BackRim = __webpack_require__(1);
+const Ground = __webpack_require__ (8);
+const Player = __webpack_require__ (9);
 
 class Game {
   constructor(canvasEl) {
     this.basketballs = [];
     this.backboard = [];
     this.rims = [];
-    this.ballStartPoint=[];
+    this.ground=[];
+    this.player= [];
+
     // this.addBallStartPoint();
     this.addBasketball();
+    this.activeBall = this.basketballs[this.basketballs.length -1];
+    this.addPlayer();
     this.addBackboard();
     this.addRims();
-    this.canvas = canvasEl;
+    this.addGround();
   }
 
   // setup and rendering objects
   backboardStartingPosition() {
     return [
-      Game.START_X + Game.DIM_X * 0.3,
-      Game.START_Y + Game.DIM_Y * 0.25
+      Game.START_X + Game.DIM_X * 0.15,
+      Game.START_Y + Game.DIM_Y * 0.15
+    ];
+  }
+  groundStartingPosition() {
+    return [
+      Game.START_X,
+      Game.START_Y + Game.DIM_Y * 0.8
     ];
   }
 
@@ -165,8 +114,14 @@ class Game {
   bballStartingPosition() {
     return [
       Game.START_X + Game.DIM_X * 0.75,
-      Game.START_Y + Game.DIM_Y * 0.25
+      Game.START_Y + Game.DIM_Y * 0.5
     ];
+  }
+
+  playerStartingPosition() {
+    let ballPos = this.bballStartingPosition();
+    return [ballPos[0]+this.activeBall.radius-10,
+            ballPos[1]];
   }
 
   addBackboard() {
@@ -179,6 +134,16 @@ class Game {
     return backboard;
   }
 
+  addGround() {
+    const ground = new Ground({
+      pos: this.groundStartingPosition(),
+      vel: [0,0],
+      game: this
+    });
+    this.add(ground);
+    return ground;
+  }
+
   addBasketball() {
     const bball = new Basketball({
       pos: this.bballStartingPosition(),
@@ -186,6 +151,15 @@ class Game {
     });
     this.add(bball);
     return bball;
+  }
+
+  addPlayer() {
+    const player = new Player({
+      pos: this.playerStartingPosition(),
+      game: this
+    });
+    this.add(player);
+    return player;
   }
 
   addRims() {
@@ -216,14 +190,20 @@ class Game {
         object instanceof BackRim) {
       this.rims.push(object);
     }
+    if (object instanceof Ground) {
+      this.ground.push(object);
+    }
+    if (object instanceof Player) {
+      this.player.push(object);
+    }
   }
 
   allNonBallObjects() {
-    return [].concat(this.backboard, this.rims, this.ballStartPoint);
+    return [].concat(this.backboard, this.rims, this.ground);
   }
 
   allObjects() {
-    return [].concat(this.basketballs, this.backboard, this.rims, this.ballStartPoint);
+    return [].concat(this.basketballs, this.backboard, this.rims, this.ground, this.player);
   }
 
   draw(ctx) {
@@ -274,20 +254,134 @@ class Game {
   }
 
   // MOUSE INTERACTION
-
+  // mouseInteraction() {
+  //   const canvas = document.getElementById("canvas");
+  //   const ctx = canvas.getContext("2d");
+  //
+  //   canvas.onmousemove = this.getMousePosition();
+  //   canvas.onmousedown = this.mouseDown();
+  //   canvas.onmouseup = this.mouseUp();
+  //
+  //   ctx.fillStyle = 'red';
+  //   ctx.strokeStyle = '#000000';
+  //   // let loopTimer = setInterval(loop, frameDelay);
+  // }
 }
 
 Game.BG_COLOR = "#000000";
 Game.START_X = 20;
 Game.START_Y = 20;
-Game.DIM_X = 960;
-Game.DIM_Y = 580;
+Game.DIM_X = 1080;
+Game.DIM_Y = 640;
 
 module.exports = Game;
 
 
 /***/ }),
+/* 1 */
+/***/ (function(module, exports) {
+
+const DEFAULTS = {
+  COLOR: '#FFA500',
+  WIDTH: 10,
+  HEIGHT: 10
+};
+
+class FrontRim {
+  constructor(options = {}) {
+    this.pos = options.pos;
+    this.vel = options.vel;
+    this.width = DEFAULTS.WIDTH;
+    this.height = DEFAULTS.HEIGHT;
+    this.color = DEFAULTS.COLOR;
+    this.game = options.game;
+    this.restitution = 1;
+  }
+
+  draw(ctx) {
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.pos[0], this.pos[1], this.width, this.height);
+  }
+
+  move() {
+
+  }
+}
+
+module.exports = FrontRim;
+
+class BackRim {
+  constructor(options = {}) {
+    this.pos = options.pos;
+    this.vel = options.vel;
+    this.width = DEFAULTS.WIDTH;
+    this.height = DEFAULTS.HEIGHT;
+    this.color = DEFAULTS.COLOR;
+    this.game = options.game;
+    this.restitution = 1;
+  }
+
+  draw(ctx) {
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.pos[0], this.pos[1], this.width, this.height);
+  }
+
+  move() {
+
+  }
+}
+
+module.exports = BackRim;
+
+
+/***/ }),
 /* 2 */
+/***/ (function(module, exports, __webpack_require__) {
+
+const Game = __webpack_require__ (0);
+const GameView = __webpack_require__ (5);
+const Matter = __webpack_require__ (6);
+
+const scaleFactor = 0.1;
+
+document.addEventListener("DOMContentLoaded", () => {
+  const canvas = document.getElementById("game-canvas");
+  canvas.width = Game.DIM_X;
+  canvas.height = Game.DIM_Y;
+
+  const ctx = canvas.getContext("2d");
+
+  const game = new Game(canvas);
+  new GameView(game, ctx).start();
+
+  // mouse INTERACTION
+  // canvas.onmousemove = getMousePosition;
+  let mouseStartPos = [0,0];
+  let mouseEndPos = [0,0];
+  canvas.onmousedown = function(e) {
+    mouseStartPos = [e.pageX, e.pageY];
+    game.activeBall.vel = [0,-20];
+    game.activeBall.pos[1] -= 1;
+  };
+  canvas.onmouseup = function(e) {
+    mouseEndPos = [e.pageX, e.pageY];
+    game.activeBall.pos = [game.activeBall.pos[0]-1, game.activeBall.pos[1]-1];
+    game.activeBall.vel = [(mouseStartPos[0]-mouseEndPos[0]) * scaleFactor,
+                           (mouseStartPos[1]-mouseEndPos[1]) * scaleFactor];
+    game.addBasketball();
+    game.activeBall = game.basketballs[game.basketballs.length-1];
+  };
+
+});
+
+// function getMousePosition(e) {
+//   mousePos[0] = e.pageX - canvas.offsetLeft;
+//     mouse.y = e.pageY - canvas.offsetTop;
+// }
+
+
+/***/ }),
+/* 3 */
 /***/ (function(module, exports) {
 
 
@@ -327,7 +421,8 @@ class Basketball {
     //in this case the MovingObject should move farther in this frame
     //velocity of object is how far it should move in 1/60th of a second
 
-    if (this.pos === this.starting_pos) {
+    if (this.pos[0] === this.starting_pos[0] &&
+        this.pos[1] >= this.starting_pos[1]) {
       return;
     }
 
@@ -473,20 +568,58 @@ class Basketball {
 
     } else {
       if(this.collidedWithSides(otherObject)) {
+        // debugger;
         this.vel[0] = -this.vel[0]*this.restitution*(otherObject.restitution) + otherObject.vel[0];
         this.vel[1] = this.vel[1]*this.restitution*(otherObject.restitution) + otherObject.vel[1];
 
+        //if right
+        if(this.pos[0] - this.radius <= otherObject.pos[0] + otherObject.width) {
+          this.pos[0] = otherObject.pos[0] + otherObject.width + this.radius + 0.001;
+        } else {
+          this.pos[0] = otherObject.pos[0] - this.radius - 0.001;
+        }
       } else if (this.collidedWithTopOrBot(otherObject)) {
+        // debugger;
         this.vel[0] = this.vel[0]*this.restitution*(otherObject.restitution) + otherObject.vel[0];
         this.vel[1] = -this.vel[1]*this.restitution*(otherObject.restitution) + otherObject.vel[1];
+        //if top
+        if(this.pos[1] + this.radius >= otherObject.pos[1]) {
+          this.pos[1] = otherObject.pos[1] - this.radius-0.001;
+        } else {
+          this.pos[1] = otherObject.pos[1] + otherObject.height + this.radius + 0.001;
+        }
       } else if (this.collidedWithCorners(otherObject)) {
-        let vectorX = (x1 - x2) / this.radius;
-        let vectorY = (y1 - y2) / this.radius;
-        this.vel[0] = this.vel[0]*this.restitution*(otherObject.restitution)*vectorX;
-        this.vel[1] = this.vel[1]*this.restitution*(otherObject.restitution)*vectorY;
+        // debugger;
 
-        // this.vel[0] = this.vel[0]*this.restitution*(-otherObject.restitution) + otherObject.vel[0];
-        // this.vel[1] = this.vel[1]*this.restitution*(-otherObject.restitution) + otherObject.vel[1];
+        // let distToTopRight = Math.sqrt(Math.pow((x2+otherObject.width) - x1, 2) + Math.pow(y2 - y1, 2));
+        // let distToTopLeft = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+        // let distToBotRight = Math.sqrt(Math.pow((x2+otherObject.width) - x1, 2) +
+        //                      Math.pow((y2+otherObject.height) - y1, 2));
+        // let distToBotLeft = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow((y2+otherObject.height) - y1, 2));
+        // let all4points = [distToTopRight, distToTopLeft, distToBotRight, distToBotLeft];
+        // let vectorX = 0; //(x1 - x2) / this.radius;
+        // let vectorY = 0; //(y1 - y2) / this.radius;
+        // switch(Math.min(...all4points)) {
+        //   case distToTopRight:
+        //     vectorX = Math.abs((x1 - (x2 + otherObject.width)) / this.radius);
+        //     vectorY = Math.abs((y1 - y2) / this.radius);
+        //
+        //   case distToTopLeft:
+        //     vectorX = Math.abs((x1 - x2) / this.radius);
+        //     vectorY = Math.abs((y2 - y1) / this.radius);
+        //   case distToBotRight:
+        //     vectorX = Math.abs((x1 - (x2 + otherObject.width)) / this.radius);
+        //     vectorY = Math.abs(((y2 + otherObject.height) - y1) / this.radius);
+        //   case distToBotLeft:
+        //     vectorX = Math.abs((x1 - x2) / this.radius);
+        //     vectorY = Math.abs(((y2 + otherObject.height) - y1) / this.radius);
+        // }
+        // // debugger;
+        // this.vel[0] = this.vel[0]*this.restitution*(otherObject.restitution)*vectorX;
+        // this.vel[1] = this.vel[1]*this.restitution*(otherObject.restitution)*vectorY;
+        //
+        // // this.vel[0] = this.vel[0]*this.restitution*(-otherObject.restitution) + otherObject.vel[0];
+        // // this.vel[1] = this.vel[1]*this.restitution*(-otherObject.restitution) + otherObject.vel[1];
       }
     }
   }
@@ -497,15 +630,49 @@ module.exports = Basketball;
 
 
 /***/ }),
-/* 3 */
+/* 4 */
+/***/ (function(module, exports) {
+
+const DEFAULTS = {
+  COLOR: '#FFA500',
+  WIDTH: 10,
+  HEIGHT: 100
+};
+
+class Backboard {
+  constructor(options = {}) {
+    this.pos = options.pos;
+    this.vel = options.vel;
+    this.width = DEFAULTS.WIDTH;
+    this.height = DEFAULTS.HEIGHT;
+    this.color = DEFAULTS.COLOR;
+    this.game = options.game;
+    this.restitution = 0.8;
+  }
+
+  draw(ctx) {
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.pos[0], this.pos[1], this.width, this.height);
+  }
+
+  move() {
+
+  }
+}
+
+module.exports = Backboard;
+
+
+/***/ }),
+/* 5 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const Game = __webpack_require__(1);
+const Game = __webpack_require__(0);
 class GameView {
   constructor(game, ctx) {
     this.ctx = ctx;
     this.game = game;
-    this.basketball = this.game.addBasketball();
+    // this.basketball = this.game.addBasketball();
   }
 
   start() {
@@ -530,7 +697,7 @@ module.exports = GameView;
 
 
 /***/ }),
-/* 4 */
+/* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(global) {var require;var require;/**
@@ -10811,10 +10978,10 @@ var Vector = _dereq_('../geometry/Vector');
 },{"../body/Composite":2,"../core/Common":14,"../core/Events":16,"../geometry/Bounds":26,"../geometry/Vector":28}]},{},[30])(30)
 });
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(5)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(7)))
 
 /***/ }),
-/* 5 */
+/* 7 */
 /***/ (function(module, exports) {
 
 var g;
@@ -10841,53 +11008,19 @@ module.exports = g;
 
 
 /***/ }),
-/* 6 */
+/* 8 */
 /***/ (function(module, exports) {
 
 const DEFAULTS = {
   COLOR: '#FFA500',
-  WIDTH: 10,
-  HEIGHT: 100
-};
-
-class Backboard {
-  constructor(options = {}) {
-    this.pos = options.pos;
-    this.vel = options.vel;
-    this.width = DEFAULTS.WIDTH;
-    this.height = DEFAULTS.HEIGHT;
-    this.color = DEFAULTS.COLOR;
-    this.game = options.game;
-    this.restitution = 0.8;
-  }
-
-  draw(ctx) {
-    ctx.fillStyle = this.color;
-    ctx.fillRect(this.pos[0], this.pos[1], this.width, this.height);
-  }
-
-  move() {
-
-  }
-}
-
-module.exports = Backboard;
-
-
-/***/ }),
-/* 7 */
-/***/ (function(module, exports) {
-
-const DEFAULTS = {
-  COLOR: '#FFA500',
-  WIDTH: 10,
+  WIDTH: 2000,
   HEIGHT: 10
 };
 
-class FrontRim {
+class Ground {
   constructor(options = {}) {
     this.pos = options.pos;
-    this.vel = options.vel;
+    this.vel = [0,0];
     this.width = DEFAULTS.WIDTH;
     this.height = DEFAULTS.HEIGHT;
     this.color = DEFAULTS.COLOR;
@@ -10905,22 +11038,25 @@ class FrontRim {
   }
 }
 
-module.exports = FrontRim;
+module.exports = Ground;
 
-class BackRim {
+
+/***/ }),
+/* 9 */
+/***/ (function(module, exports) {
+
+class Player {
   constructor(options = {}) {
     this.pos = options.pos;
-    this.vel = options.vel;
-    this.width = DEFAULTS.WIDTH;
-    this.height = DEFAULTS.HEIGHT;
-    this.color = DEFAULTS.COLOR;
+    this.vel = [0,0];
     this.game = options.game;
-    this.restitution = 1;
+    this.starting_pos = this.pos;
   }
 
   draw(ctx) {
-    ctx.fillStyle = this.color;
-    ctx.fillRect(this.pos[0], this.pos[1], this.width, this.height);
+    const image = new Image();
+    image.src = './assets/curry-set.png';
+    ctx.drawImage(image, this.pos[0], this.pos[1], 60, 200);
   }
 
   move() {
@@ -10928,7 +11064,7 @@ class BackRim {
   }
 }
 
-module.exports = BackRim;
+module.exports = Player;
 
 
 /***/ })
