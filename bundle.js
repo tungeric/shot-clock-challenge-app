@@ -73,8 +73,8 @@ const FrontRim = __webpack_require__(1);
 const BackRim = __webpack_require__(1);
 const Ground = __webpack_require__ (5);
 const Player = __webpack_require__ (6);
-const GameHUD = __webpack_require__(10);
-const Sound = __webpack_require__(11);
+const GameHUD = __webpack_require__(7);
+const Sound = __webpack_require__(8);
 
 class Game {
   constructor(canvasEl) {
@@ -240,10 +240,11 @@ class Game {
     ctx.clearRect(0, 0,
                   Game.START_X + Game.DIM_X,
                   Game.START_Y + Game.DIM_Y);
-    ctx.fillStyle = Game.BG_COLOR;
-    ctx.fillRect(Game.START_X, Game.START_Y,
-                 Game.START_X + Game.DIM_X,
-                 Game.START_Y + Game.DIM_Y);
+    // ctx.fillStyle = Game.BG_COLOR;
+    // ctx.fillRect(Game.START_X, Game.START_Y,
+    //              Game.START_X + Game.DIM_X,
+    //              Game.START_Y + Game.DIM_Y);
+
     // const image = new Image();
     // if(Math.floor(time) % 800 > 400 ) {
     //   image.src = './assets/bg-1gray.png';
@@ -251,6 +252,7 @@ class Game {
     //   image.src = './assets/bg-2gray.png';
     // }
     // ctx.drawImage(image, Game.START_X, Game.START_Y, Game.START_X + Game.DIM_X, Game.START_Y + Game.DIM_Y);
+
     this.allObjects().forEach((object) => {
       object.draw(ctx);
     });
@@ -403,8 +405,8 @@ module.exports = BackRim;
 /***/ (function(module, exports, __webpack_require__) {
 
 const Game = __webpack_require__ (0);
-const GameView = __webpack_require__ (7);
-const Matter = __webpack_require__ (8);
+const GameView = __webpack_require__ (9);
+const Matter = __webpack_require__ (10);
 
 const scaleFactor = 0.1;
 
@@ -488,7 +490,8 @@ class Basketball {
     const image = new Image();
     image.src = './assets/bball.png';
     // ctx.save();
-    let netVel = Math.sqrt(Math.pow(this.vel[0], 2) + Math.pow(this.vel[1], 2));
+    // let netVel = Math.sqrt(Math.pow(this.vel[0], 2) + Math.pow(this.vel[1], 2));
+    // ctx.translate(this.pos[0], this.pos[1]);
     // ctx.rotate(0.2*netVel);
     ctx.drawImage(image, this.pos[0]-this.radius, this.pos[1]-this.radius, this.radius*2, this.radius*2);
     // ctx.restore();
@@ -874,6 +877,55 @@ module.exports = Player;
 
 /***/ }),
 /* 7 */
+/***/ (function(module, exports) {
+
+class GameHUD {
+  constructor(options = {}) {
+    this.pos = options.pos;
+    this.game = options.game;
+  }
+
+  draw(ctx) {
+    ctx.fillStyle = "white";
+    ctx.font = "30px Arial";
+    let currentScore = `Baskets made: ${this.game.checkScore()}`;
+    ctx.fillText(currentScore, this.pos[0], this.pos[1]);
+  }
+
+  move() {
+
+  }
+}
+
+module.exports = GameHUD;
+
+
+/***/ }),
+/* 8 */
+/***/ (function(module, exports) {
+
+class Sound {
+  constructor(src) {
+    this.sound = document.createElement("audio");
+    this.sound.src = src;
+    this.sound.setAttribute("preload", "auto");
+    this.sound.setAttribute("controls", "none");
+    this.sound.style.display = "none";
+    document.body.appendChild(this.sound);
+    this.play = function(){
+        this.sound.play();
+    };
+    this.stop = function(){
+        this.sound.pause();
+    };
+  }
+}
+
+module.exports = Sound;
+
+
+/***/ }),
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 const Game = __webpack_require__(0);
@@ -894,7 +946,7 @@ class GameView {
     const timeDelta = time - this.lastTime;
 
     this.game.step(timeDelta);
-    this.game.draw(this.ctx);
+    this.game.draw(this.ctx, time);
     this.lastTime = time;
     //every call to animate requests causes another call to animate
     requestAnimationFrame(this.animate.bind(this));
@@ -905,7 +957,7 @@ module.exports = GameView;
 
 
 /***/ }),
-/* 8 */
+/* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(global) {var require;var require;/**
@@ -11186,10 +11238,10 @@ var Vector = _dereq_('../geometry/Vector');
 },{"../body/Composite":2,"../core/Common":14,"../core/Events":16,"../geometry/Bounds":26,"../geometry/Vector":28}]},{},[30])(30)
 });
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(9)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(11)))
 
 /***/ }),
-/* 9 */
+/* 11 */
 /***/ (function(module, exports) {
 
 var g;
@@ -11213,55 +11265,6 @@ try {
 // easier to handle this case. if(!global) { ...}
 
 module.exports = g;
-
-
-/***/ }),
-/* 10 */
-/***/ (function(module, exports) {
-
-class GameHUD {
-  constructor(options = {}) {
-    this.pos = options.pos;
-    this.game = options.game;
-  }
-
-  draw(ctx) {
-    ctx.fillStyle = "white";
-    ctx.font = "30px Arial";
-    let currentScore = `Baskets made: ${this.game.checkScore()}`;
-    ctx.fillText(currentScore, this.pos[0], this.pos[1]);
-  }
-
-  move() {
-
-  }
-}
-
-module.exports = GameHUD;
-
-
-/***/ }),
-/* 11 */
-/***/ (function(module, exports) {
-
-class Sound {
-  constructor(src) {
-    this.sound = document.createElement("audio");
-    this.sound.src = src;
-    this.sound.setAttribute("preload", "auto");
-    this.sound.setAttribute("controls", "none");
-    this.sound.style.display = "none";
-    document.body.appendChild(this.sound);
-    this.play = function(){
-        this.sound.play();
-    };
-    this.stop = function(){
-        this.sound.pause();
-    };
-  }
-}
-
-module.exports = Sound;
 
 
 /***/ })
