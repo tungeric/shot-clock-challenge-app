@@ -73,14 +73,18 @@ const FrontRim = __webpack_require__(1);
 const BackRim = __webpack_require__(1);
 const Ground = __webpack_require__ (5);
 const Player = __webpack_require__ (6);
+const GameHUD = __webpack_require__(10);
+const Sound = __webpack_require__(11);
 
 class Game {
   constructor(canvasEl) {
+    this.score = 0;
     this.basketballs = [];
     this.backboard = [];
     this.rims = [];
     this.ground=[];
     this.player= [];
+    this.gameHUD = [];
 
     // this.addBallStartPoint();
     this.addBasketball();
@@ -89,6 +93,14 @@ class Game {
     this.addBackboard();
     this.addRims();
     this.addGround();
+    this.addGameHUD();
+    this.shotBalls = [];
+
+    this.mute = false;
+    this.bounceSound = new Sound('./assets/bball-bounce.wav');
+    this.backboardSound = new Sound('./assets/backboard.wav');
+    this.rimSound = new Sound('./assets/backboard.wav');
+    this.netSound = new Sound('./assets/net.wav');
   }
 
   // setup and rendering objects
@@ -162,9 +174,18 @@ class Game {
     return player;
   }
 
+  addGameHUD() {
+    const gameHUD = new GameHUD({
+      pos: [60,60],
+      game: this
+    });
+    this.add(gameHUD);
+    return gameHUD;
+  }
+
   addRims() {
     let backRimPos = this.rimStartingPosition();
-    const rimWidth = 60;
+    const rimWidth = 72;
     const frontRim = new FrontRim({
       pos: [backRimPos[0]+rimWidth, backRimPos[1]],
       vel: [0,0],
@@ -196,6 +217,9 @@ class Game {
     if (object instanceof Player) {
       this.player.push(object);
     }
+    if (object instanceof GameHUD) {
+      this.gameHUD.push(object);
+    }
   }
 
   allNonBallObjects() {
@@ -203,10 +227,16 @@ class Game {
   }
 
   allObjects() {
-    return [].concat(this.basketballs, this.backboard, this.rims, this.ground, this.player);
+    let bballArray = [];
+    if (this.basketballs.length > 5) {
+      bballArray = this.basketballs.slice(this.basketballs.length-5);
+    } else {
+      bballArray = this.basketballs;
+    }
+    return [].concat(bballArray, this.backboard, this.rims, this.ground, this.player, this.gameHUD);
   }
 
-  draw(ctx) {
+  draw(ctx, time) {
     ctx.clearRect(0, 0,
                   Game.START_X + Game.DIM_X,
                   Game.START_Y + Game.DIM_Y);
@@ -214,6 +244,13 @@ class Game {
     ctx.fillRect(Game.START_X, Game.START_Y,
                  Game.START_X + Game.DIM_X,
                  Game.START_Y + Game.DIM_Y);
+    // const image = new Image();
+    // if(Math.floor(time) % 800 > 400 ) {
+    //   image.src = './assets/bg-1gray.png';
+    // } else {
+    //   image.src = './assets/bg-2gray.png';
+    // }
+    // ctx.drawImage(image, Game.START_X, Game.START_Y, Game.START_X + Game.DIM_X, Game.START_Y + Game.DIM_Y);
     this.allObjects().forEach((object) => {
       object.draw(ctx);
     });
@@ -221,6 +258,7 @@ class Game {
 
   step(delta) {
     this.checkCollisions();
+    // this.checkScore();
     this.moveObjects(delta);
   }
 
@@ -246,11 +284,37 @@ class Game {
         const obj2 = allOtherObj[j];
 
         if (obj1.isCollidedWith(obj2)) {
+          if(this.mute=== false) {
+            if(obj2 instanceof Ground) {
+              if (obj1.vel[1]>1) {
+                this.bounceSound.play();
+              }
+            } else if (obj2 instanceof Backboard) {
+              this.backboardSound.play();
+            } else if (obj2 instanceof BackRim) {
+              this.rimSound.play();
+            }
+          }
+
           const collision = obj1.handleCollision(obj2);
           if (collision) return;
         }
       }
     }
+  }
+  checkScore() {
+    this.shotBalls.forEach((shotBall) => {
+      // console.log(this.shotBall.prev_pos[1]);
+      // console.log(this.shotBall.pos[1]);
+      if(shotBall.pos[0] < this.rims[0].pos[0] &&
+        shotBall.pos[0] > this.rims[1].pos[0] &&
+        shotBall.pos[1] > this.rims[0].pos[1] &&
+        shotBall.prev_pos[1] <= this.rims[0].pos[1]) {
+          this.score +=1;
+          this.netSound.play();
+      }
+    });
+    return this.score;
   }
 
   // MOUSE INTERACTION
@@ -282,7 +346,7 @@ module.exports = Game;
 /***/ (function(module, exports) {
 
 const DEFAULTS = {
-  COLOR: '#FFA500',
+  COLOR: 'red',
   WIDTH: 10,
   HEIGHT: 10
 };
@@ -299,8 +363,8 @@ class FrontRim {
   }
 
   draw(ctx) {
-    ctx.fillStyle = this.color;
-    ctx.fillRect(this.pos[0], this.pos[1], this.width, this.height);
+    // ctx.fillStyle = this.color;
+    // ctx.fillRect(this.pos[0], this.pos[1], this.width, this.height);
   }
 
   move() {
@@ -322,8 +386,8 @@ class BackRim {
   }
 
   draw(ctx) {
-    ctx.fillStyle = this.color;
-    ctx.fillRect(this.pos[0], this.pos[1], this.width, this.height);
+    // ctx.fillStyle = this.color;
+    // ctx.fillRect(this.pos[0], this.pos[1], this.width, this.height);
   }
 
   move() {
@@ -374,6 +438,7 @@ document.addEventListener("DOMContentLoaded", () => {
     game.activeBall.pos = [game.activeBall.pos[0]-1, game.activeBall.pos[1]-1];
     game.activeBall.vel = [(mouseStartPos[0]-mouseEndPos[0]) * scaleFactor,
                            (mouseStartPos[1]-mouseEndPos[1]) * scaleFactor];
+    game.shotBalls.push(game.activeBall);
     game.activeBall = null;
     setTimeout(() => {
       game.addBasketball();
@@ -410,6 +475,7 @@ class Basketball {
     this.mass = 0.1;
     this.restitution = 1;
     this.starting_pos = options.game.bballStartingPosition();
+    this.prev_pos = options.pos;
   }
 
   draw(ctx) {
@@ -433,7 +499,7 @@ class Basketball {
     //if the computer is busy the time delta will be larger
     //in this case the MovingObject should move farther in this frame
     //velocity of object is how far it should move in 1/60th of a second
-
+    this.prev_pos = this.pos.slice(0);
     if (this.pos[0] === this.starting_pos[0] &&
         this.pos[1] >= this.starting_pos[1]) {
           // console.log(this.pos[1]);
@@ -502,7 +568,7 @@ class Basketball {
     let y1 = this.pos[1];
     let x2 = otherObject.pos[0];
     let y2 = otherObject.pos[1];
-    if(x1 > x2 && x1 < (x2 + otherObject.width)) {
+    if(x1 >= x2 && x1 <= (x2 + otherObject.width)) {
       if (((y1 + this.radius) >= (y2)) &&
           ((y1 - this.radius) <= y2 + otherObject.height)) {
         return true;
@@ -604,6 +670,18 @@ class Basketball {
           this.pos[1] = otherObject.pos[1] + otherObject.height + this.radius + 0.001;
         }
       } else if (this.collidedWithCorners(otherObject)) {
+        //if ball is moving to left and down
+        this.vel[0] = -this.vel[0]*this.restitution*(otherObject.restitution) + otherObject.vel[0];
+        this.vel[1] = -this.vel[1]*this.restitution*(otherObject.restitution) + otherObject.vel[1];
+        if(this.vel[0] < 0 && this.vel[1] > 0) {
+          this.pos[0] = otherObject.pos[0]+otherObject.width;
+          this.pos[1] = otherObject.pos[1];
+        }
+        //if ball is moving to right and down
+        else if ( this.vel[0] > 0 && this.vel[1] > 0) {
+          this.pos[0] = otherObject.pos[0];
+          this.pos[1] = otherObject.pos[1];
+        }
         // debugger;
 
         // let distToTopRight = Math.sqrt(Math.pow((x2+otherObject.width) - x1, 2) + Math.pow(y2 - y1, 2));
@@ -703,8 +781,8 @@ class Ground {
   }
 
   draw(ctx) {
-    ctx.fillStyle = this.color;
-    ctx.fillRect(this.pos[0], this.pos[1], this.width, this.height);
+    // ctx.fillStyle = this.color;
+    // ctx.fillRect(this.pos[0], this.pos[1], this.width, this.height);
   }
 
   move() {
@@ -737,14 +815,16 @@ class Player {
       // console.log("SET!");
       this.pos[1] = this.starting_pos[1];
       image.src = './assets/curry-set.png';
+      ctx.drawImage(image, this.pos[0], this.pos[1], this.width, this.height);
     } else if (this.released === false) {
       // console.log(this.vel);
 
       image.src = './assets/curry-rise.png';
+      ctx.drawImage(image, this.pos[0], this.pos[1], this.width*1.05, this.height*1.05);
     } else {
       image.src = './assets/curry-release.png';
+      ctx.drawImage(image, this.pos[0], this.pos[1], this.width*1.15, this.height*1.15);
     }
-    ctx.drawImage(image, this.pos[0], this.pos[1], this.width, this.height);
   }
 
   move(timeDelta) {
@@ -816,7 +896,6 @@ class GameView {
     this.game.step(timeDelta);
     this.game.draw(this.ctx);
     this.lastTime = time;
-
     //every call to animate requests causes another call to animate
     requestAnimationFrame(this.animate.bind(this));
   }
@@ -11134,6 +11213,55 @@ try {
 // easier to handle this case. if(!global) { ...}
 
 module.exports = g;
+
+
+/***/ }),
+/* 10 */
+/***/ (function(module, exports) {
+
+class GameHUD {
+  constructor(options = {}) {
+    this.pos = options.pos;
+    this.game = options.game;
+  }
+
+  draw(ctx) {
+    ctx.fillStyle = "white";
+    ctx.font = "30px Arial";
+    let currentScore = `Baskets made: ${this.game.checkScore()}`;
+    ctx.fillText(currentScore, this.pos[0], this.pos[1]);
+  }
+
+  move() {
+
+  }
+}
+
+module.exports = GameHUD;
+
+
+/***/ }),
+/* 11 */
+/***/ (function(module, exports) {
+
+class Sound {
+  constructor(src) {
+    this.sound = document.createElement("audio");
+    this.sound.src = src;
+    this.sound.setAttribute("preload", "auto");
+    this.sound.setAttribute("controls", "none");
+    this.sound.style.display = "none";
+    document.body.appendChild(this.sound);
+    this.play = function(){
+        this.sound.play();
+    };
+    this.stop = function(){
+        this.sound.pause();
+    };
+  }
+}
+
+module.exports = Sound;
 
 
 /***/ })

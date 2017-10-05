@@ -1,0 +1,22 @@
+.container {
+  position: relative;
+}
+.game-text {
+  position: absolute;
+  color: white;
+}
+
+#bg {
+  width: 1080px;
+  height: 640px;
+  margin: 20px;
+  position: relative;
+  display: block;
+  -webkit-filter: grayscale(80%);
+}
+#game-canvas {
+  position: relative;
+  display: block;
+  margin-top: -660px;
+  margin-left: 20px;
+}
