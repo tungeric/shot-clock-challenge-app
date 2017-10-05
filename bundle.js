@@ -85,7 +85,7 @@ class Game {
     this.ground=[];
     this.player= [];
     this.gameHUD = [];
-    this.playing = false;
+    this.playing = "not started";
 
     // this.addBallStartPoint();
     this.addBasketball();
@@ -105,11 +105,16 @@ class Game {
     this.buzzerSound = new Sound('./assets/buzzer.wav');
   }
 
+  resetObjects() {
+    this.score = 0;
+    this.shotBalls = [];
+  }
+
   // setup and rendering objects
   backboardStartingPosition() {
     return [
-      Game.START_X + Game.DIM_X * 0.15,
-      Game.START_Y + Game.DIM_Y * 0.15
+      Game.START_X + Game.DIM_X * 0.1,
+      Game.START_Y + Game.DIM_Y * 0.1
     ];
   }
   groundStartingPosition() {
@@ -230,7 +235,7 @@ class Game {
 
   allObjects() {
     let bballArray = [];
-    if (this.basketballs.length > 5) {
+    if (this.basketballs.length > 10) {
       bballArray = this.basketballs.slice(this.basketballs.length-5);
     } else {
       bballArray = this.basketballs;
@@ -319,6 +324,7 @@ class Game {
         shotBall.pos[1] > this.rims[0].pos[1] &&
         shotBall.prev_pos[1] <= this.rims[0].pos[1]) {
           this.score +=1;
+          shotBall = null;
           this.netSound.play();
       }
     });
@@ -371,15 +377,25 @@ class FrontRim {
   }
 
   draw(ctx) {
-    // ctx.fillStyle = this.color;
-    // ctx.fillRect(this.pos[0], this.pos[1], this.width, this.height);
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.pos[0], this.pos[1], this.width, this.height);
   }
 
   move() {
+    if (this.game.backboard[0].moving === true) {
+      if(this.pos[1] < 100) {
+        this.vel=[0,1];
+      }
+      if(this.pos[1] > 300) {
+        this.vel = [0,-1];
+      }
+    }
 
+    this.pos[0] += this.vel[0]*frameRate*100;
+    this.pos[1] += this.vel[1]*frameRate*100;
   }
 }
-
+const frameRate = 1/60;
 module.exports = FrontRim;
 
 class BackRim {
@@ -394,11 +410,21 @@ class BackRim {
   }
 
   draw(ctx) {
-    // ctx.fillStyle = this.color;
-    // ctx.fillRect(this.pos[0], this.pos[1], this.width, this.height);
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.pos[0], this.pos[1], this.width, this.height);
   }
 
   move() {
+    if (this.game.backboard[0].moving === true) {
+      if(this.game.backboard[0].pos[1] < 100) {
+        this.vel=[0,0.3];
+      }
+      if(this.game.backboard[0].pos[1] > 300) {
+        this.vel = [0,-0.3];
+      }
+      this.pos[0] += this.vel[0]*frameRate*100;
+      this.pos[1] += this.vel[1]*frameRate*100;
+    }
 
   }
 }
@@ -434,10 +460,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   canvas.onmousedown = function(e) {
     mouseStartPos = [e.pageX, e.pageY];
-    if(game.playing === false) {
+    if(game.playing === "not started" || game.playing === "over") {
       if(e.pageX >=460 && e.pageX <= 660 &&
          e.pageY >=240 && e.pageY <= 440) {
-           game.playing = true;
+           game.resetObjects()
+           game.playing = "playing";
            game.buzzerSound.play();
        }
     } else {
@@ -459,7 +486,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   canvas.onmouseup = function(e) {
-    if(game.playing === false) {
+    if(game.playing === "not started" || game.playing === "over") {
     } else {
       mouseEndPos = [e.pageX, e.pageY];
       game.player[0].released = true;
@@ -758,7 +785,7 @@ module.exports = Basketball;
 /***/ (function(module, exports) {
 
 const DEFAULTS = {
-  COLOR: '#FFA500',
+  COLOR: '#000000',
   WIDTH: 10,
   HEIGHT: 100
 };
@@ -772,20 +799,33 @@ class Backboard {
     this.color = DEFAULTS.COLOR;
     this.game = options.game;
     this.restitution = 0.8;
+    this.moving = false;
   }
 
   draw(ctx) {
-    // ctx.fillStyle = this.color;
-    // ctx.fillRect(this.pos[0], this.pos[1], this.width, this.height);
+    ctx.fillStyle = this.color;
+    ctx.fillRect(0, this.pos[1]+this.height*0.4, this.pos[0], 30);
     const image = new Image();
     image.src = './assets/hoop.png';
     ctx.drawImage(image, this.pos[0]-30, this.pos[1]-5, 130, this.height+20);
   }
 
   move() {
+    if (this.moving === true) {
+      if(this.pos[1] < 100) {
+        this.vel=[0,0.3];
+      }
+      if(this.pos[1] > 300) {
+        this.vel = [0,-0.3];
+      }
+      this.pos[0] += this.vel[0]*frameRate*100;
+      this.pos[1] += this.vel[1]*frameRate*100;
+    }
+
 
   }
 }
+const frameRate = 1/60;
 
 module.exports = Backboard;
 
@@ -913,44 +953,73 @@ class GameHUD {
     this.game = options.game;
     this.clock = 24;
     this.startTime = null;
+    this.currentScore = 0;
   }
 
   draw(ctx, time) {
-    if(this.game.playing === false) {
-      ctx.fillStyle = "white";
-      ctx.font = "45px Arial";
-      let header = "How many shots can you hit in 24 seconds?";
-      ctx.fillText(header, 100, 100);
+    switch(this.game.playing) {
+      case "not started":
+        ctx.fillStyle = "white";
+        ctx.font = "45px Arial";
+        let header = "How many shots can you hit in 24 seconds?";
+        ctx.fillText(header, 100, 60);
 
-      ctx.fillStyle = "black";
-      ctx.font = "18px Arial";
-      let controls = "Controls: Click and drag. Release to shoot the ball.";
-      ctx.fillText(controls, 50, 520);
+        ctx.fillStyle = "black";
+        ctx.font = "18px Arial";
+        let controls = "Controls: Click and drag. Release to shoot the ball.";
+        ctx.fillText(controls, 50, 520);
 
-      ctx.fillStyle = "black";
-      ctx.font = "18px Arial";
-      let credits = "Background from NBA 2K17. Curry image from ESPN.";
-      ctx.fillText(credits, 50, 570);
+        ctx.fillStyle = "black";
+        ctx.font = "18px Arial";
+        let credits = "Background from NBA 2K17. Curry image from ESPN.";
+        ctx.fillText(credits, 50, 570);
 
-      const startButton = new Image();
-      startButton.src = './assets/start-button.png';
-      ctx.drawImage(startButton, 460, 240, 200, 200);
-      this.startTime = time;
-      // ctx.drawImage(startButton, this.game.START_X + this.game.DIM_X * 0.45,
-      //                                 this.game.START_Y + this.game.DIM_Y * 0.45,
-      //                                 200, 50);
-    } else {
-      ctx.fillStyle = "white";
-      ctx.font = "30px Arial";
-      let currentScore = `Baskets made: ${this.game.checkScore()}`;
-      ctx.fillText(currentScore, this.pos[0], this.pos[1]);
+        const startButton = new Image();
+        startButton.src = './assets/start-button.png';
+        ctx.drawImage(startButton, 460, 240, 200, 200);
+        this.startTime = time;
+        // ctx.drawImage(startButton, this.game.START_X + this.game.DIM_X * 0.45,
+        //                                 this.game.START_Y + this.game.DIM_Y * 0.45,
+        //                                 200, 50);
+        break;
+      case "playing":
+        ctx.fillStyle = "white";
+        ctx.font = "30px Arial";
+        this.currentScore = this.game.checkScore();
+        let currentScore = `Baskets made: ${this.currentScore}`;
+        ctx.fillText(currentScore, this.pos[0], this.pos[1]);
 
-      ctx.fillStyle = "white";
-      ctx.font = "100px Arial";
-      // debugger;
-      let shotClock = this.clock - Math.floor((time - this.startTime)/1000*0.8);
-      let currentClock = `${shotClock}`;
-      ctx.fillText(currentClock, 510, 100);
+        ctx.fillStyle = "white";
+        ctx.font = "100px Arial";
+        // debugger;
+        let shotClock = this.clock - Math.floor((time - this.startTime)/1000*0.8);
+        if (shotClock <= 16) {
+          this.game.backboard[0].moving = true;
+        }
+        if (shotClock <= 0) {
+          this.game.buzzerSound.play();
+          this.game.playing = "over";
+          this.game.backboard[0].moving = false;
+        }
+        let currentClock = `${shotClock}`;
+        ctx.fillText(currentClock, 510, 100);
+        break;
+      case "over":
+        ctx.fillStyle = "white";
+        ctx.font = "45px Arial";
+        let result = `You made ${this.currentScore} shots!`;
+        ctx.fillText(result, 350, 60);
+        const restartButton = new Image();
+        restartButton.src = './assets/start-button.png';
+        ctx.drawImage(restartButton, 460, 240, 200, 200);
+        this.startTime = time;
+
+        ctx.fillStyle = "black";
+        ctx.font = "45px Arial";
+        let replay = "Replay?";
+        ctx.fillText(replay, 500, 500);
+      default:
+        break;
     }
   }
 
