@@ -85,6 +85,7 @@ class Game {
     this.ground=[];
     this.player= [];
     this.gameHUD = [];
+    this.playing = false;
 
     // this.addBallStartPoint();
     this.addBasketball();
@@ -101,6 +102,7 @@ class Game {
     this.backboardSound = new Sound('./assets/backboard.wav');
     this.rimSound = new Sound('./assets/backboard.wav');
     this.netSound = new Sound('./assets/net.wav');
+    this.buzzerSound = new Sound('./assets/buzzer.wav');
   }
 
   // setup and rendering objects
@@ -254,7 +256,11 @@ class Game {
     // ctx.drawImage(image, Game.START_X, Game.START_Y, Game.START_X + Game.DIM_X, Game.START_Y + Game.DIM_Y);
 
     this.allObjects().forEach((object) => {
-      object.draw(ctx);
+      if(object instanceof GameHUD) {
+        object.draw(ctx, time);
+      } else {
+        object.draw(ctx);
+      }
     });
   }
 
@@ -288,7 +294,7 @@ class Game {
         if (obj1.isCollidedWith(obj2)) {
           if(this.mute=== false) {
             if(obj2 instanceof Ground) {
-              if (obj1.vel[1]>1) {
+              if (obj1.vel[1]>3) {
                 this.bounceSound.play();
               }
             } else if (obj2 instanceof Backboard) {
@@ -421,31 +427,53 @@ document.addEventListener("DOMContentLoaded", () => {
   new GameView(game, ctx).start();
 
   // mouse INTERACTION
-  // canvas.onmousemove = getMousePosition;
   let mouseStartPos = [0,0];
   let mouseEndPos = [0,0];
+
+  let mouse = {x: 0, y: 0, isDown: false};
+
   canvas.onmousedown = function(e) {
     mouseStartPos = [e.pageX, e.pageY];
-    game.player[0].released = false;
-    game.activeBall.pos[0] = game.activeBall.pos[0]+15;
-    game.activeBall.pos[1] = game.activeBall.pos[1]-2;
-    game.player[0].pos[1] = game.player[0].starting_pos[1]-2;
-    // debugger;
-    game.activeBall.vel = [0,-5];
-    game.player[0].vel = [0,-5];
+    if(game.playing === false) {
+      if(e.pageX >=460 && e.pageX <= 660 &&
+         e.pageY >=240 && e.pageY <= 440) {
+           game.playing = true;
+           game.buzzerSound.play();
+       }
+    } else {
+      game.player[0].released = false;
+      game.activeBall.pos[0] = game.activeBall.pos[0]+15;
+      game.activeBall.pos[1] = game.activeBall.pos[1]-2;
+      game.player[0].pos[1] = game.player[0].starting_pos[1]-2;
+
+      game.activeBall.vel = [0,-5];
+      game.player[0].vel = [0,-5];
+      mouse.isDown = true;
+
+    }
   };
+
+  canvas.onmousemove = function(e) {
+    mouse.x = e.pageX;
+    mouse.y = e.pageY;
+  };
+
   canvas.onmouseup = function(e) {
-    mouseEndPos = [e.pageX, e.pageY];
-    game.player[0].released = true;
-    game.activeBall.pos = [game.activeBall.pos[0]-1, game.activeBall.pos[1]-1];
-    game.activeBall.vel = [(mouseStartPos[0]-mouseEndPos[0]) * scaleFactor,
-                           (mouseStartPos[1]-mouseEndPos[1]) * scaleFactor];
-    game.shotBalls.push(game.activeBall);
-    game.activeBall = null;
-    setTimeout(() => {
-      game.addBasketball();
-      game.activeBall = game.basketballs[game.basketballs.length-1];
-    }, 500);
+    if(game.playing === false) {
+    } else {
+      mouseEndPos = [e.pageX, e.pageY];
+      game.player[0].released = true;
+      game.activeBall.pos = [game.activeBall.pos[0]-1, game.activeBall.pos[1]-1];
+      game.activeBall.vel = [(mouseStartPos[0]-mouseEndPos[0]) * scaleFactor,
+                             (mouseStartPos[1]-mouseEndPos[1]) * scaleFactor];
+      game.shotBalls.push(game.activeBall);
+      game.activeBall = null;
+      mouse.isDown = false;
+      setTimeout(() => {
+        game.addBasketball();
+        game.activeBall = game.basketballs[game.basketballs.length-1];
+      }, 500);
+    }
   };
 
 });
@@ -747,8 +775,8 @@ class Backboard {
   }
 
   draw(ctx) {
-    ctx.fillStyle = this.color;
-    ctx.fillRect(this.pos[0], this.pos[1], this.width, this.height);
+    // ctx.fillStyle = this.color;
+    // ctx.fillRect(this.pos[0], this.pos[1], this.width, this.height);
     const image = new Image();
     image.src = './assets/hoop.png';
     ctx.drawImage(image, this.pos[0]-30, this.pos[1]-5, 130, this.height+20);
@@ -883,13 +911,47 @@ class GameHUD {
   constructor(options = {}) {
     this.pos = options.pos;
     this.game = options.game;
+    this.clock = 24;
+    this.startTime = null;
   }
 
-  draw(ctx) {
-    ctx.fillStyle = "white";
-    ctx.font = "30px Arial";
-    let currentScore = `Baskets made: ${this.game.checkScore()}`;
-    ctx.fillText(currentScore, this.pos[0], this.pos[1]);
+  draw(ctx, time) {
+    if(this.game.playing === false) {
+      ctx.fillStyle = "white";
+      ctx.font = "45px Arial";
+      let header = "How many shots can you hit in 24 seconds?";
+      ctx.fillText(header, 100, 100);
+
+      ctx.fillStyle = "black";
+      ctx.font = "18px Arial";
+      let controls = "Controls: Click and drag. Release to shoot the ball.";
+      ctx.fillText(controls, 50, 520);
+
+      ctx.fillStyle = "black";
+      ctx.font = "18px Arial";
+      let credits = "Background from NBA 2K17. Curry image from ESPN.";
+      ctx.fillText(credits, 50, 570);
+
+      const startButton = new Image();
+      startButton.src = './assets/start-button.png';
+      ctx.drawImage(startButton, 460, 240, 200, 200);
+      this.startTime = time;
+      // ctx.drawImage(startButton, this.game.START_X + this.game.DIM_X * 0.45,
+      //                                 this.game.START_Y + this.game.DIM_Y * 0.45,
+      //                                 200, 50);
+    } else {
+      ctx.fillStyle = "white";
+      ctx.font = "30px Arial";
+      let currentScore = `Baskets made: ${this.game.checkScore()}`;
+      ctx.fillText(currentScore, this.pos[0], this.pos[1]);
+
+      ctx.fillStyle = "white";
+      ctx.font = "100px Arial";
+      // debugger;
+      let shotClock = this.clock - Math.floor((time - this.startTime)/1000*0.8);
+      let currentClock = `${shotClock}`;
+      ctx.fillText(currentClock, 510, 100);
+    }
   }
 
   move() {
@@ -933,6 +995,7 @@ class GameView {
   constructor(game, ctx) {
     this.ctx = ctx;
     this.game = game;
+
     // this.basketball = this.game.addBasketball();
   }
 
@@ -944,7 +1007,6 @@ class GameView {
 
   animate(time) {
     const timeDelta = time - this.lastTime;
-
     this.game.step(timeDelta);
     this.game.draw(this.ctx, time);
     this.lastTime = time;
