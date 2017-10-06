@@ -60,21 +60,21 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 2);
+/******/ 	return __webpack_require__(__webpack_require__.s = 3);
 /******/ })
 /************************************************************************/
 /******/ ([
 /* 0 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const Basketball = __webpack_require__(3);
-const Backboard = __webpack_require__(4);
+const Basketball = __webpack_require__(4);
+const Backboard = __webpack_require__(5);
 const FrontRim = __webpack_require__(1);
 const BackRim = __webpack_require__(1);
-const Ground = __webpack_require__ (5);
-const Player = __webpack_require__ (6);
-const GameHUD = __webpack_require__(7);
-const Sound = __webpack_require__(8);
+const Ground = __webpack_require__ (6);
+const Player = __webpack_require__ (7);
+const GameHUD = __webpack_require__(8);
+const Sound = __webpack_require__(2);
 
 class Game {
   constructor(canvasEl) {
@@ -420,8 +420,8 @@ class BackRim {
   }
 
   draw(ctx) {
-    ctx.fillStyle = this.color;
-    ctx.fillRect(this.pos[0], this.pos[1], this.width, this.height);
+    // ctx.fillStyle = this.color;
+    // ctx.fillRect(this.pos[0], this.pos[1], this.width, this.height);
   }
 
   move() {
@@ -444,12 +444,36 @@ module.exports = BackRim;
 
 /***/ }),
 /* 2 */
+/***/ (function(module, exports) {
+
+class Sound {
+  constructor(src) {
+    this.sound = document.createElement("audio");
+    this.sound.src = src;
+    this.sound.setAttribute("preload", "auto");
+    this.sound.setAttribute("controls", "none");
+    this.sound.style.display = "none";
+    document.body.appendChild(this.sound);
+    this.play = function(){
+        this.sound.play();
+    };
+    this.stop = function(){
+        this.sound.pause();
+    };
+  }
+}
+
+module.exports = Sound;
+
+
+/***/ }),
+/* 3 */
 /***/ (function(module, exports, __webpack_require__) {
 
 const Game = __webpack_require__ (0);
 const GameView = __webpack_require__ (9);
 const Matter = __webpack_require__ (10);
-const Sound = __webpack_require__(8);
+const Sound = __webpack_require__(2);
 
 const scaleFactor = 0.1;
 
@@ -538,7 +562,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 /***/ }),
-/* 3 */
+/* 4 */
 /***/ (function(module, exports) {
 
 
@@ -807,7 +831,7 @@ module.exports = Basketball;
 
 
 /***/ }),
-/* 4 */
+/* 5 */
 /***/ (function(module, exports) {
 
 const DEFAULTS = {
@@ -857,7 +881,7 @@ module.exports = Backboard;
 
 
 /***/ }),
-/* 5 */
+/* 6 */
 /***/ (function(module, exports) {
 
 const DEFAULTS = {
@@ -891,7 +915,7 @@ module.exports = Ground;
 
 
 /***/ }),
-/* 6 */
+/* 7 */
 /***/ (function(module, exports) {
 
 class Player {
@@ -970,7 +994,7 @@ module.exports = Player;
 
 
 /***/ }),
-/* 7 */
+/* 8 */
 /***/ (function(module, exports) {
 
 class GameHUD {
@@ -1064,30 +1088,6 @@ class GameHUD {
 }
 
 module.exports = GameHUD;
-
-
-/***/ }),
-/* 8 */
-/***/ (function(module, exports) {
-
-class Sound {
-  constructor(src) {
-    this.sound = document.createElement("audio");
-    this.sound.src = src;
-    this.sound.setAttribute("preload", "auto");
-    this.sound.setAttribute("controls", "none");
-    this.sound.style.display = "none";
-    document.body.appendChild(this.sound);
-    this.play = function(){
-        this.sound.play();
-    };
-    this.stop = function(){
-        this.sound.pause();
-    };
-  }
-}
-
-module.exports = Sound;
 
 
 /***/ }),
