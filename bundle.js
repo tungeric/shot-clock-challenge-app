@@ -323,9 +323,18 @@ class Game {
         shotBall.pos[0] > this.rims[1].pos[0] &&
         shotBall.pos[1] > this.rims[0].pos[1] &&
         shotBall.prev_pos[1] <= this.rims[0].pos[1]) {
+          if(this.mute === false){
+            let makeSound = new Sound();
+            makeSound.sound.src = makeArray[Math.floor(Math.random() * makeArray.length)];
+            makeSound.play();
+          }
           this.score +=1;
           shotBall = null;
           this.netSound.play();
+          if(this.score === 2 && this.mute === false) {
+            let secondMake = new Sound('./assets/curry-comment-after-2.wav');
+            secondMake.play();
+          }
       }
     });
     return this.score;
@@ -351,6 +360,7 @@ Game.START_X = 20;
 Game.START_Y = 20;
 Game.DIM_X = 1080;
 Game.DIM_Y = 640;
+const makeArray = ['./assets/curry-make1.wav','./assets/curry-make2.wav', './assets/curry-make3.wav'];
 
 module.exports = Game;
 
@@ -439,6 +449,7 @@ module.exports = BackRim;
 const Game = __webpack_require__ (0);
 const GameView = __webpack_require__ (9);
 const Matter = __webpack_require__ (10);
+const Sound = __webpack_require__(8);
 
 const scaleFactor = 0.1;
 
@@ -461,9 +472,9 @@ document.addEventListener("DOMContentLoaded", () => {
   canvas.onmousedown = function(e) {
     mouseStartPos = [e.pageX, e.pageY];
     if(game.playing === "not started" || game.playing === "over") {
-      if(e.pageX >=460 && e.pageX <= 660 &&
-         e.pageY >=240 && e.pageY <= 440) {
-           game.resetObjects()
+      if(e.pageX >=480 && e.pageX <= 680 &&
+         e.pageY >=260 && e.pageY <= 460) {
+           game.resetObjects();
            game.playing = "playing";
            game.buzzerSound.play();
        }
@@ -476,7 +487,16 @@ document.addEventListener("DOMContentLoaded", () => {
       game.activeBall.vel = [0,-5];
       game.player[0].vel = [0,-5];
       mouse.isDown = true;
-
+    }
+    if (e.pageX >=1020 && e.pageX <= 1050 &&
+        e.pageY >=620 & e.pageY <= 650) {
+          if(game.mute === false) {
+            console.log(game.mute);
+            game.mute = true;
+          } else {
+            console.log(game.mute);
+            game.mute = false;
+          }
     }
   };
 
@@ -485,6 +505,7 @@ document.addEventListener("DOMContentLoaded", () => {
     mouse.y = e.pageY;
   };
 
+  const shotArray = ['./assets/curry-shoot1.wav','./assets/curry-shoot2.wav'];
   canvas.onmouseup = function(e) {
     if(game.playing === "not started" || game.playing === "over") {
     } else {
@@ -494,6 +515,11 @@ document.addEventListener("DOMContentLoaded", () => {
       game.activeBall.vel = [(mouseStartPos[0]-mouseEndPos[0]) * scaleFactor,
                              (mouseStartPos[1]-mouseEndPos[1]) * scaleFactor];
       game.shotBalls.push(game.activeBall);
+      if(game.mute === false) {
+        let shotSound = new Sound('', game.mute);
+        shotSound.sound.src = shotArray[Math.floor(Math.random() * shotArray.length)];
+        shotSound.play();
+      }
       game.activeBall = null;
       mouse.isDown = false;
       setTimeout(() => {
@@ -957,6 +983,15 @@ class GameHUD {
   }
 
   draw(ctx, time) {
+    if(this.game.mute === true) {
+      const unmuteButton = new Image();
+      unmuteButton.src = './assets/soundoff.png';
+      ctx.drawImage(unmuteButton, 1000, 600, 30, 30);
+    } else {
+      const muteButton = new Image();
+      muteButton.src = './assets/soundon.png';
+      ctx.drawImage(muteButton, 1000, 600, 30, 30);
+    }
     switch(this.game.playing) {
       case "not started":
         ctx.fillStyle = "white";
