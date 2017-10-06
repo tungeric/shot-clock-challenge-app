@@ -500,7 +500,9 @@ document.addEventListener("DOMContentLoaded", () => {
          e.pageY >=260 && e.pageY <= 460) {
            game.resetObjects();
            game.playing = "playing";
-           game.buzzerSound.play();
+           if (game.mute === false) {
+             game.buzzerSound.play();
+           }
        }
     } else {
       game.player[0].released = false;
@@ -1086,7 +1088,9 @@ class GameHUD {
           this.game.backboard[0].moving = true;
         }
         if (shotClock <= 0) {
-          this.game.buzzerSound.play();
+          if (this.game.mute === false) {
+            this.game.buzzerSound.play();
+          }
           this.game.playing = "over";
           this.game.backboard[0].moving = false;
         }
